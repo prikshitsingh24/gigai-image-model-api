@@ -41,7 +41,7 @@ async def upload_model(
 ):
     try:
         # Validate file extension
-        valid_extensions = {".safetensors", ".ckpt", ".pt", ".bin"}
+        valid_extensions = {".safetensors", ".ckpt", ".pt", ".bin",".sft"}
         file_ext = os.path.splitext(model_file.filename)[1].lower()
         if file_ext not in valid_extensions:
             raise HTTPException(
@@ -56,6 +56,15 @@ async def upload_model(
         async with aiofiles.open(save_path, 'wb') as out_file:
             while content := await model_file.read(1024 * 1024):  # 1MB chunks
                 await out_file.write(content)
+
+        # Set proper permissions
+        os.chmod(save_path, 0o755)
+        
+        # Force refresh of model list (optional)
+        try:
+            os.utime(os.path.join(MODEL_BASE_DIR, model_type), None)
+        except Exception:
+            pass
 
         return {
             "status": "success",
