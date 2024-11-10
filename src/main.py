@@ -1,6 +1,5 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-import shutil
 import uvicorn
 import os
 from typing import Dict
@@ -19,13 +18,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Model type enum
+# Model type enum - updated to match ComfyUI's directory structure
 class ModelType(str, Enum):
-    checkpoint = "checkpoints"
-    lora = "loras"
+    checkpoints = "checkpoints"
+    clip = "clip"
+    clip_vision = "clip_vision"
+    configs = "configs"
     controlnet = "controlnet"
-    embedding = "embeddings"
+    diffusers = "diffusers"
+    diffusion_models = "diffusion_models"
+    embeddings = "embeddings"
+    gligen = "gligen"
+    hypernetworks = "hypernetworks"
+    loras = "loras"
+    photomaker = "photomaker"
+    style_models = "style_models"
+    unet = "unet"
+    upscale_models = "upscale_models"
     vae = "vae"
+    vae_approx = "vae_approx"
 
 # Base directory for models
 MODEL_BASE_DIR = "/opt/ComfyUI/models"
@@ -41,7 +52,7 @@ async def upload_model(
 ):
     try:
         # Validate file extension
-        valid_extensions = {".safetensors", ".ckpt", ".pt", ".bin",".sft"}
+        valid_extensions = {".safetensors", ".ckpt", ".pt", ".bin", ".sft", ".yaml"}
         file_ext = os.path.splitext(model_file.filename)[1].lower()
         if file_ext not in valid_extensions:
             raise HTTPException(
@@ -60,7 +71,7 @@ async def upload_model(
         # Set proper permissions
         os.chmod(save_path, 0o755)
         
-        # Force refresh of model list (optional)
+        # Force refresh of model list
         try:
             os.utime(os.path.join(MODEL_BASE_DIR, model_type), None)
         except Exception:
@@ -82,8 +93,12 @@ async def list_models():
     for model_type in ModelType:
         model_dir = os.path.join(MODEL_BASE_DIR, model_type)
         if os.path.exists(model_dir):
-            models[model_type] = [f for f in os.listdir(model_dir) 
-                                if os.path.isfile(os.path.join(model_dir, f))]
+            # Filter out placeholder files and get only actual model files
+            files = [f for f in os.listdir(model_dir) 
+                    if os.path.isfile(os.path.join(model_dir, f)) and 
+                    not f.startswith("put_") and 
+                    not f.endswith("_here")]
+            models[model_type] = files
     return models
 
 @app.delete("/models/{model_type}/{filename}")
@@ -97,8 +112,32 @@ async def delete_model(model_type: ModelType, filename: str):
         return {"status": "success", "message": f"Deleted {filename}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
-    
+
+# Add a debug endpoint to check directory structure
+@app.get("/debug/dirs")
+async def debug_dirs():
+    result = {}
+    for model_type in ModelType:
+        dir_path = os.path.join(MODEL_BASE_DIR, model_type)
+        try:
+            files = os.listdir(dir_path)
+            result[model_type] = {
+                "exists": os.path.exists(dir_path),
+                "is_dir": os.path.isdir(dir_path),
+                "permissions": oct(os.stat(dir_path).st_mode)[-3:],
+                "files": files,
+                "files_details": [
+                    {
+                        "name": f,
+                        "is_file": os.path.isfile(os.path.join(dir_path, f)),
+                        "size": os.path.getsize(os.path.join(dir_path, f))
+                    } for f in files
+                ]
+            }
+        except Exception as e:
+            result[model_type] = {"error": str(e)}
+    return result
+
 def start():
     uvicorn.run(app, host="0.0.0.0", port=8000)
 
