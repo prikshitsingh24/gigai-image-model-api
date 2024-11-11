@@ -51,7 +51,6 @@ for model_type in ModelType:
 
 def restart_comfyui():
     for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
-        try:
             if "comfyui" in ' '.join(proc.info['cmdline']):  # Make sure it's the ComfyUI process
                 print(f"Killing process {proc.info['pid']} ({proc.info['name']})")
                 os.kill(proc.info['pid'], signal.SIGTERM)  # Graceful termination
