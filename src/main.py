@@ -50,15 +50,17 @@ for model_type in ModelType:
     os.makedirs(os.path.join(MODEL_BASE_DIR, model_type), exist_ok=True)
 
 def restart_comfyui():
-    # Find and kill the ComfyUI process (adjust to your process name)
-    for proc in psutil.process_iter(['pid', 'name']):
-        if 'python' in proc.info['name']:
-            if "comfyui" in proc.info['name']:
+    for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+        try:
+            if "comfyui" in ' '.join(proc.info['cmdline']):  # Make sure it's the ComfyUI process
+                print(f"Killing process {proc.info['pid']} ({proc.info['name']})")
                 os.kill(proc.info['pid'], signal.SIGTERM)  # Graceful termination
-                time.sleep(3)  # Wait for the process to terminate
-    
-    # Restart the comfyui backend (adjust the path if necessary)
-    subprocess.Popen(["/app/start.sh"])  # This runs the start.sh script
+                time.sleep(10)  # Wait for the process to terminate
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            pass  # Handle any issues with accessing processes
+
+    # Restart the ComfyUI backend (ensure the script is correct)
+    subprocess.Popen(["/app/start.sh"]) 
 
 @app.post("/upload/model/{model_type}")
 async def upload_model(
