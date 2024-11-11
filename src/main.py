@@ -54,7 +54,7 @@ def restart_comfyui():
             if "comfyui" in ' '.join(proc.info['cmdline']):  # Make sure it's the ComfyUI process
                 print(f"Killing process {proc.info['pid']} ({proc.info['name']})")
                 os.kill(proc.info['pid'], signal.SIGTERM)  # Graceful termination
-                time.sleep(10)  # Wait for the process to terminate
+                time.sleep(5)  # Wait for the process to terminate
     try:
         print("Starting ComfyUI backend...")
         result = subprocess.Popen(["/app/start.sh"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
