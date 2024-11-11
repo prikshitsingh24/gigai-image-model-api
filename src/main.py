@@ -6,6 +6,10 @@ from typing import Dict
 from enum import Enum
 import aiofiles
 import logging
+import subprocess
+import psutil
+import time
+import signal
 
 app = FastAPI()
 
@@ -45,6 +49,18 @@ MODEL_BASE_DIR = "/opt/ComfyUI/models"
 for model_type in ModelType:
     os.makedirs(os.path.join(MODEL_BASE_DIR, model_type), exist_ok=True)
 
+# Function to restart the comfyui backend
+def restart_comfyui():
+    # Find and kill the ComfyUI process (adjust to your process name)
+    for proc in psutil.process_iter(['pid', 'name']):
+        if 'python' in proc.info['name']:
+            if "comfyui" in proc.info['name']:
+                os.kill(proc.info['pid'], signal.SIGTERM)  # Graceful termination
+                time.sleep(3)  # Wait for the process to terminate
+    
+    # Restart the comfyui backend (adjust the path if necessary)
+    subprocess.Popen(["/app/start.sh"])  # This runs the start.sh script
+
 @app.post("/upload/model/{model_type}")
 async def upload_model(
     model_type: ModelType,
@@ -76,6 +92,9 @@ async def upload_model(
             os.utime(os.path.join(MODEL_BASE_DIR, model_type), None)
         except Exception:
             pass
+        
+        # Call restart_comfyui to restart the backend after upload
+        restart_comfyui()
 
         return {
             "status": "success",
