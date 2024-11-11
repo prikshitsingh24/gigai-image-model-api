@@ -50,31 +50,87 @@ for model_type in ModelType:
     os.makedirs(os.path.join(MODEL_BASE_DIR, model_type), exist_ok=True)
 
 
-def restart_comfyui():
+
+import time
+from typing import Dict
+
+def restart_comfyui(container_name: str = "gigai-image-model-runner", timeout: int = 60) -> Dict[str, str]:
+    # Validate container name
+    if not container_name.isalnum() and not all(c in '-_' for c in container_name if not c.isalnum()):
+        return {
+            "status": "error",
+            "message": "Invalid container name"
+        }
+    
     try:
-        # Start the container restart in the background
-        print("Restarting container...")
-        restart_process = subprocess.Popen(["docker", "restart", "gigai-image-model-runner"])
-
-        # Wait for the restart process to complete before proceeding
-        restart_process.wait()
-
-        # Return status after the restart completes
-        if restart_process.returncode == 0:
+        # Check if container exists
+        check_process = subprocess.run(
+            ["docker", "container", "inspect", container_name],
+            capture_output=True,
+            timeout=10
+        )
+        if check_process.returncode != 0:
             return {
-                "status": "success",
-                "message": "Model upload successfull"
+                "status": "error",
+                "message": f"Container {container_name} does not exist"
             }
+
+        # Restart container
+        restart_process = subprocess.Popen(
+            ["docker", "restart", container_name],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        
+        # Wait for restart with timeout
+        try:
+            stdout, stderr = restart_process.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            restart_process.kill()
+            return {
+                "status": "error",
+                "message": f"Restart operation timed out after {timeout} seconds"
+            }
+
+        if restart_process.returncode == 0:
+            # Verify container is running
+            time.sleep(2)  # Give container time to start
+            check_running = subprocess.run(
+                ["docker", "container", "inspect", "-f", "{{.State.Running}}", container_name],
+                capture_output=True,
+                timeout=10
+            )
+            
+            if check_running.stdout.strip() == b"true":
+                return {
+                    "status": "success",
+                    "message": "Container restarted successfully"
+                }
+            else:
+                return {
+                    "status": "failure",
+                    "message": "Container restarted but is not running"
+                }
         else:
             return {
                 "status": "failure",
-                "message": "Model upload failed"
+                "message": f"Container restart failed: {stderr.decode()}"
             }
 
-    except subprocess.CalledProcessError as e:
+    except subprocess.TimeoutExpired:
         return {
             "status": "error",
-            "message": f"Error during container restart: {e}"
+            "message": "Operation timed out while checking container status"
+        }
+    except FileNotFoundError:
+        return {
+            "status": "error",
+            "message": "Docker command not found. Is Docker installed?"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Unexpected error during container restart: {str(e)}"
         }
 
 
