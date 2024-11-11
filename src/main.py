@@ -49,17 +49,20 @@ MODEL_BASE_DIR = "/opt/ComfyUI/models"
 for model_type in ModelType:
     os.makedirs(os.path.join(MODEL_BASE_DIR, model_type), exist_ok=True)
 
-# Function to restart the comfyui backend
-def restart_comfyui():
-    # Find and kill the ComfyUI process (adjust to your process name)
-    for proc in psutil.process_iter(['pid', 'name']):
-        if 'python' in proc.info['name']:
-            if "comfyui" in proc.info['name']:
-                os.kill(proc.info['pid'], signal.SIGTERM)  # Graceful termination
-                time.sleep(3)  # Wait for the process to terminate
-    
-    # Restart the comfyui backend (adjust the path if necessary)
-    subprocess.Popen(["/app/start.sh"])  # This runs the start.sh script
+def restart_container():
+    try:
+        # Get the container's ID (assuming it's the same for this script)
+        container_id = subprocess.check_output(['cat', '/proc/self/cgroup']).decode('utf-8').splitlines()[-1].split('/')[-1]
+        
+        # Stop the container (this will kill all processes inside the container)
+        subprocess.run(["docker", "stop", container_id])
+        
+        # Start the container again (restores all mounted volumes, so no data is lost)
+        subprocess.run(["docker", "start", container_id])
+
+    except Exception as e:
+        logging.error(f"Error restarting container: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to restart container")
 
 @app.post("/upload/model/{model_type}")
 async def upload_model(
