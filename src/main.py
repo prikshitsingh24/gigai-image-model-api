@@ -51,12 +51,23 @@ for model_type in ModelType:
 
 
 def restart_comfyui():
-    container_name = "gigai-image-model-runner"
     try:
-        print("Restarting the entire container...")
-        subprocess.run(["docker", "restart", container_name], check=True)
-    except Exception as e:
-        print(f"Failed to restart the container: {e}")
+        # Start the container restart in the background
+        print("Restarting container...")
+        restart_process = subprocess.Popen(["docker", "restart", "gigai-image-model-runner"])
+        
+        # Start showing logs in real-time
+        print("Following container logs...")
+        logs_process = subprocess.Popen(["docker", "logs", "-f", "gigai-image-model-runner"])
+        
+        # Wait for the restart process to complete
+        restart_process.wait()
+        
+        # Optionally, wait for the logs process to finish (this will run indefinitely until the logs are stopped)
+        logs_process.wait()
+    
+    except subprocess.CalledProcessError as e:
+        print(f"Error during container restart or log fetching: {e}")
 
 @app.post("/upload/model/{model_type}")
 async def upload_model(
