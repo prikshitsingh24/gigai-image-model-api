@@ -49,6 +49,16 @@ MODEL_BASE_DIR = "/opt/ComfyUI/models"
 for model_type in ModelType:
     os.makedirs(os.path.join(MODEL_BASE_DIR, model_type), exist_ok=True)
 
+import subprocess
+
+def restart_comfyui():
+    container_name = "gigai-image-model-runner"
+    try:
+        print("Restarting the entire container...")
+        subprocess.run(["docker", "restart", container_name], check=True)
+    except Exception as e:
+        print(f"Failed to restart the container: {e}")
+
 @app.post("/upload/model/{model_type}")
 async def upload_model(
     model_type: ModelType,
@@ -82,7 +92,7 @@ async def upload_model(
             pass
         
         print({"status": "success","message": f"Model uploaded successfully to {model_type}","filename": model_file.filename})
-        os._exit(0)
+        restart_comfyui()
         
     except Exception as e:
         logging.error(f"Error uploading model: {str(e)}")
