@@ -51,89 +51,6 @@ for model_type in ModelType:
 
 
 
-import time
-from typing import Dict
-
-def restart_comfyui(container_name: str = "gigai-image-model-runner", timeout: int = 60) -> Dict[str, str]:
-    # Validate container name
-    if not container_name.isalnum() and not all(c in '-_' for c in container_name if not c.isalnum()):
-        return {
-            "status": "error",
-            "message": "Invalid container name"
-        }
-    
-    try:
-        # Check if container exists
-        check_process = subprocess.run(
-            ["docker", "container", "inspect", container_name],
-            capture_output=True,
-            timeout=10
-        )
-        if check_process.returncode != 0:
-            return {
-                "status": "error",
-                "message": f"Container {container_name} does not exist"
-            }
-
-        # Restart container
-        restart_process = subprocess.Popen(
-            ["docker", "restart", container_name],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
-        )
-        
-        # Wait for restart with timeout
-        try:
-            stdout, stderr = restart_process.communicate(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            restart_process.kill()
-            return {
-                "status": "error",
-                "message": f"Restart operation timed out after {timeout} seconds"
-            }
-
-        if restart_process.returncode == 0:
-            # Verify container is running
-            time.sleep(2)  # Give container time to start
-            check_running = subprocess.run(
-                ["docker", "container", "inspect", "-f", "{{.State.Running}}", container_name],
-                capture_output=True,
-                timeout=10
-            )
-            
-            if check_running.stdout.strip() == b"true":
-                return {
-                    "status": "success",
-                    "message": "Container restarted successfully"
-                }
-            else:
-                return {
-                    "status": "failure",
-                    "message": "Container restarted but is not running"
-                }
-        else:
-            return {
-                "status": "failure",
-                "message": f"Container restart failed: {stderr.decode()}"
-            }
-
-    except subprocess.TimeoutExpired:
-        return {
-            "status": "error",
-            "message": "Operation timed out while checking container status"
-        }
-    except FileNotFoundError:
-        return {
-            "status": "error",
-            "message": "Docker command not found. Is Docker installed?"
-        }
-    except Exception as e:
-        return {
-            "status": "error",
-            "message": f"Unexpected error during container restart: {str(e)}"
-        }
-
-
 @app.post("/upload/model/{model_type}")
 async def upload_model(
     model_type: ModelType,
@@ -159,15 +76,23 @@ async def upload_model(
 
         # Set proper permissions
         os.chmod(save_path, 0o755)
+
+          # Prepare response
+        response = {
+            "status": "success",
+            "message": f"Model uploaded successfully to {model_type}. Server will restart.",
+            "filename": model_file.filename,
+            "requiresRestart": True  # Flag for frontend to know server will restart
+        }
         
-        # Force refresh of model list
-        try:
-            os.utime(os.path.join(MODEL_BASE_DIR, model_type), None)
-        except Exception:
-            pass
+        # Start restart process in background without waiting
+        subprocess.Popen(
+            ["docker", "restart", "gigai-image-model-runner"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
         
-        print({"status": "success","message": f"Model uploaded successfully to {model_type}","filename": model_file.filename})
-        restart_comfyui()
+        return response
         
     except Exception as e:
         logging.error(f"Error uploading model: {str(e)}")
