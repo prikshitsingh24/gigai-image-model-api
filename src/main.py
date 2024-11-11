@@ -97,7 +97,7 @@ async def upload_model(
             pass
         
         # Call restart_comfyui to restart the backend after upload
-        restart_comfyui()
+        restart_container()
 
         return {
             "status": "success",
