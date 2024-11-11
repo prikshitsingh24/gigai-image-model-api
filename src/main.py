@@ -55,19 +55,28 @@ def restart_comfyui():
         # Start the container restart in the background
         print("Restarting container...")
         restart_process = subprocess.Popen(["docker", "restart", "gigai-image-model-runner"])
-        
-        # Start showing logs in real-time
-        print("Following container logs...")
-        logs_process = subprocess.Popen(["docker", "logs", "-f", "gigai-image-model-runner"])
-        
-        # Wait for the restart process to complete
+
+        # Wait for the restart process to complete before proceeding
         restart_process.wait()
-        
-        # Optionally, wait for the logs process to finish (this will run indefinitely until the logs are stopped)
-        logs_process.wait()
-    
+
+        # Return status after the restart completes
+        if restart_process.returncode == 0:
+            return {
+                "status": "success",
+                "message": "Model upload successfull"
+            }
+        else:
+            return {
+                "status": "failure",
+                "message": "Model upload failed"
+            }
+
     except subprocess.CalledProcessError as e:
-        print(f"Error during container restart or log fetching: {e}")
+        return {
+            "status": "error",
+            "message": f"Error during container restart: {e}"
+        }
+
 
 @app.post("/upload/model/{model_type}")
 async def upload_model(
