@@ -49,7 +49,6 @@ MODEL_BASE_DIR = "/opt/ComfyUI/models"
 for model_type in ModelType:
     os.makedirs(os.path.join(MODEL_BASE_DIR, model_type), exist_ok=True)
 
-import subprocess
 
 def restart_comfyui():
     container_name = "gigai-image-model-runner"
