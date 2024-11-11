@@ -49,23 +49,6 @@ MODEL_BASE_DIR = "/opt/ComfyUI/models"
 for model_type in ModelType:
     os.makedirs(os.path.join(MODEL_BASE_DIR, model_type), exist_ok=True)
 
-def restart_comfyui():
-    for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
-            if "comfyui" in ' '.join(proc.info['cmdline']):  # Make sure it's the ComfyUI process
-                print(f"Killing process {proc.info['pid']} ({proc.info['name']})")
-                os.kill(proc.info['pid'], signal.SIGTERM)  # Graceful termination
-                time.sleep(5)  # Wait for the process to terminate
-    try:
-        print("Starting ComfyUI backend...")
-        result = subprocess.Popen(["/app/start.sh"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = result.communicate()  # Capture the output and errors
-        print("STDOUT:", stdout.decode())
-        print("STDERR:", stderr.decode())
-    except Exception as e:
-        print(f"Failed to start ComfyUI: {e}")
-    # Restart the ComfyUI backend (ensure the script is correct)
-    subprocess.Popen(["/app/start.sh"]) 
-
 @app.post("/upload/model/{model_type}")
 async def upload_model(
     model_type: ModelType,
@@ -98,15 +81,9 @@ async def upload_model(
         except Exception:
             pass
         
-        # Call restart_comfyui to restart the backend after upload
-        restart_comfyui()
-
-        return {
-            "status": "success",
-            "message": f"Model uploaded successfully to {model_type}",
-            "filename": model_file.filename,
-            "path": save_path
-        }
+        print({"status": "success","message": f"Model uploaded successfully to {model_type}","filename": model_file.filename})
+        os._exit(0)
+        
     except Exception as e:
         logging.error(f"Error uploading model: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
