@@ -44,6 +44,7 @@ class ModelType(str, Enum):
 
 # Base directory for models
 MODEL_BASE_DIR = "/opt/ComfyUI/models"
+WORKFLOW_BASE_DIR = "/opt/ComfyUI/workflows"
 
 # Ensure directories exist
 for model_type in ModelType:
@@ -148,6 +149,25 @@ async def debug_dirs():
         except Exception as e:
             result[model_type] = {"error": str(e)}
     return result
+
+@app.get("/workflows/list")
+async def list_workflows():
+    workflows = {}
+    # Iterate over each subdirectory (model type) inside the workflow directory
+    for workflow_type in os.listdir(WORKFLOW_BASE_DIR):
+        workflow_dir = os.path.join(WORKFLOW_BASE_DIR, workflow_type)
+        
+        if os.path.isdir(workflow_dir):  # Check if it's a directory
+            # List all `.ts` files in the subdirectory
+            files = [
+                f for f in os.listdir(workflow_dir)
+                if os.path.isfile(os.path.join(workflow_dir, f)) and f.endswith(".ts")
+            ]
+            
+            if files:  # Only add model type if there are .ts files
+                workflows[model_type] = files
+                
+    return workflows
 
 def start():
     uvicorn.run(app, host="0.0.0.0", port=8000)
