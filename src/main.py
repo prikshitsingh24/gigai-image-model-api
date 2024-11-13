@@ -165,7 +165,7 @@ async def list_workflows():
             ]
             
             if files:  # Only add model type if there are .ts files
-                workflows[model_type] = files
+                workflows[workflow_type] = files
                 
     return workflows
 
