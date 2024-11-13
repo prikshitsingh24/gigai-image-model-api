@@ -153,20 +153,26 @@ async def debug_dirs():
 @app.get("/workflows/list")
 async def list_workflows():
     workflows = {}
-    # Iterate over each subdirectory (model type) inside the workflow directory
-    for workflow_type in os.listdir(WORKFLOW_BASE_DIR):
-        workflow_dir = os.path.join(WORKFLOW_BASE_DIR, workflow_type)
+    
+    # Walk through all directories and subdirectories inside WORKFLOW_BASE_DIR
+    for root, dirs, files in os.walk(WORKFLOW_BASE_DIR):
+        print(f"Checking directory: {root}")  # Debugging line
+        print(f"Files found: {files}")        # Debugging line
+
+        # Filter for .ts files only
+        ts_files = [f for f in files if f.endswith(".ts")]
         
-        if os.path.isdir(workflow_dir):  # Check if it's a directory
-            # List all `.ts` files in the subdirectory
-            files = [
-                f for f in os.listdir(workflow_dir)
-                if os.path.isfile(os.path.join(workflow_dir, f)) and f.endswith(".ts")
-            ]
+        if ts_files:
+            # Get the relative path for the directory
+            relative_dir = os.path.relpath(root, WORKFLOW_BASE_DIR)
+            print(f"Relative directory: {relative_dir}")  # Debugging line
             
-            if files:  # Only add model type if there are .ts files
-                workflows[workflow_type] = files
-                
+            if relative_dir == ".":
+                relative_dir = "root"
+            
+            workflows[relative_dir] = ts_files
+    
+    print(f"Workflows found: {workflows}")  # Debugging line
     return workflows
 
 def start():
