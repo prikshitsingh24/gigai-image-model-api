@@ -1,25 +1,36 @@
 import subprocess
-import threading
-import time
 import os
+import logging
 
-def startComfyui(startup_script_path):
-    def run_comfyui():
-        try:
-            # Start ComfyUI with proper Python path
-            env = os.environ.copy()
-            env["PYTHONPATH"] = "/opt/ComfyUI"
-            subprocess.run(
-                ["python3", startup_script_path],
-                env=env,
-                check=True
-            )
-        except Exception as e:
-            print(f"Error starting ComfyUI: {e}")
+def startComfyui(host="0.0.0.0", port=3000):
+    """
+    Launch ComfyUI using init.sh script with specific environment variables
     
-    # Start ComfyUI in a separate thread
-    comfy_thread = threading.Thread(target=run_comfyui, daemon=True)
-    comfy_thread.start()
-    
-    # Wait for ComfyUI to initialize
-    time.sleep(5)
+    Args:
+        host (str): Host address for ComfyUI
+        port (int): Port for ComfyUI
+    """
+    try:
+        # Set environment variables
+        env = os.environ.copy()
+        env.update({
+            "DIRECT_ADDRESS": host,
+            "COMFYUI_PORT_HOST": str(port),
+            "WEB_ENABLE_AUTH": "false",
+            "CF_QUICK_TUNNELS": "false"
+        })
+        
+        # Launch ComfyUI process using init.sh
+        process = subprocess.Popen(
+            ["/opt/ComfyUI/init.sh"],
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        
+        logging.info(f"Started ComfyUI on {host}:{port}")
+        return process
+        
+    except Exception as e:
+        logging.error(f"Failed to start ComfyUI: {e}")
+        raise

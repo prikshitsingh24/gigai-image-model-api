@@ -48,6 +48,8 @@ class ModelType(str, Enum):
 STARTUP_SCRIPT_PATH = "/opt/ComfyUI/main.py"
 MODEL_BASE_DIR = "/opt/ComfyUI/models"
 WORKFLOW_BASE_DIR = "/opt/ComfyUI/workflows"
+COMFY_HOST = "127.0.0.1"
+COMFY_PORT = "8188"
 
 # Ensure directories exist
 for model_type in ModelType:
@@ -56,8 +58,18 @@ for model_type in ModelType:
 @app.on_event("startup")
 async def startup_event():
     logging.info("Starting ComfyUI...")
-    startComfyui(STARTUP_SCRIPT_PATH)
-    logging.info("ComfyUI started")
+    global comfy_process
+    comfy_process = startComfyui(
+        host=COMFY_HOST,
+        port=COMFY_PORT
+    )
+    
+@app.on_event("shutdown")
+async def shutdown_event():
+    if comfy_process:
+        logging.info("Shutting down ComfyUI...")
+        comfy_process.terminate()
+        comfy_process.wait()
 
 
 
