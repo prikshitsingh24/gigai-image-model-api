@@ -187,7 +187,7 @@ def start_comfyui():
     global comfy_process
     logging.info("Starting ComfyUI...")
     comfy_process = startComfyui(COMFY_HOST, COMFY_PORT)
-    logging.info(f"ComfyUI started with PID {comfy_process.pid}")
+    logging.info(f"ComfyUI started: {comfy_process}")
 
 def start():
     # Start ComfyUI in a separate thread

@@ -28,7 +28,7 @@ async def startComfyui(host: str, port: int):
             env=env
         )
         
-        logging.info(f"Started ComfyUI on {host}:{port} with PID {process.pid}")
+        logging.info(f"Started ComfyUI on {host}:{port} with  {process}")
         return process
         
     except Exception as e:
