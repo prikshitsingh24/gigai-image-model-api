@@ -11,6 +11,8 @@ import psutil
 import time
 import signal
 
+from utils import startComfyui
+
 app = FastAPI()
 
 # Enable CORS
@@ -43,6 +45,7 @@ class ModelType(str, Enum):
     vae_approx = "vae_approx"
 
 # Base directory for models
+STARTUP_SCRIPT_PATH = "/opt/ComfyUI/main.py"
 MODEL_BASE_DIR = "/opt/ComfyUI/models"
 WORKFLOW_BASE_DIR = "/opt/ComfyUI/workflows"
 
@@ -176,6 +179,7 @@ async def list_workflows():
     return workflows
 
 def start():
+    startComfyui(STARTUP_SCRIPT_PATH)
     uvicorn.run(app, host="0.0.0.0", port=8000)
 
 if __name__ == "__main__":
