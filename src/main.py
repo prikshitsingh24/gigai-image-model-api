@@ -53,7 +53,7 @@ WORKFLOW_BASE_DIR = "/opt/ComfyUI/workflows"
 for model_type in ModelType:
     os.makedirs(os.path.join(MODEL_BASE_DIR, model_type), exist_ok=True)
 
-@app.lifespan("startup")
+@app.on_event("startup")
 async def startup_event():
     logging.info("Starting ComfyUI...")
     startComfyui(STARTUP_SCRIPT_PATH)
