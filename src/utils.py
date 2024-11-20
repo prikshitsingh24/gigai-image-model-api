@@ -2,7 +2,7 @@ import subprocess
 import os
 import logging
 
-def startComfyui(host="0.0.0.0", port=3000):
+def startComfyui(host, port):
     """
     Launch ComfyUI using init.sh script with specific environment variables
     

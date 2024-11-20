@@ -7,13 +7,10 @@ from enum import Enum
 import aiofiles
 import logging
 import subprocess
-import psutil
-import time
-import signal
 
 from utils import startComfyui
 
-app = FastAPI()
+app = FastAPI(lifespan="lifespan_handler")
 
 # Enable CORS
 app.add_middleware(
@@ -55,21 +52,24 @@ COMFY_PORT = "8188"
 for model_type in ModelType:
     os.makedirs(os.path.join(MODEL_BASE_DIR, model_type), exist_ok=True)
 
-@app.on_event("startup")
-async def startup_event():
-    logging.info("Starting ComfyUI...")
+async def lifespan_handler(app: FastAPI):
     global comfy_process
-    comfy_process = startComfyui(
-        host=COMFY_HOST,
-        port=COMFY_PORT
-    )
+    # Startup logic
+    logging.info("Starting ComfyUI...")
+    comfy_process = await startComfyui(COMFY_HOST, COMFY_PORT)
+    logging.info(f"ComfyUI started with PID {comfy_process.pid}")
     
-@app.on_event("shutdown")
-async def shutdown_event():
+    # Yield control to the FastAPI app (this keeps the app running until shutdown)
+    yield
+
+    # Shutdown logic
     if comfy_process:
         logging.info("Shutting down ComfyUI...")
         comfy_process.terminate()
-        comfy_process.wait()
+        await comfy_process.wait()
+        logging.info("ComfyUI has been terminated.")
+    else:
+        logging.warning("ComfyUI was not running.")
 
 
 
