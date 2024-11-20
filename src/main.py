@@ -46,25 +46,7 @@ for model_type in ModelType:
 
 app = FastAPI()
 
-# Startup event to start ComfyUI
-@app.on_event("startup")
-async def startup_event():
-    global comfy_process
-    logging.info("Starting ComfyUI...")
-    comfy_process = await startComfyui(COMFY_HOST, COMFY_PORT)
-    logging.info(f"ComfyUI started with PID {comfy_process.pid}")
 
-# Shutdown event to stop ComfyUI
-@app.on_event("shutdown")
-async def shutdown_event():
-    global comfy_process
-    if comfy_process:
-        logging.info("Shutting down ComfyUI...")
-        comfy_process.terminate()
-        comfy_process.wait()
-        logging.info("ComfyUI has been terminated.")
-    else:
-        logging.warning("ComfyUI was not running.")
 
 # Enable CORS
 app.add_middleware(
@@ -200,7 +182,21 @@ async def list_workflows():
     return workflows
 
 def start():
+    global comfy_process
+    logging.info("Starting ComfyUI...")
+    comfy_process = startComfyui(COMFY_HOST, COMFY_PORT)
+    logging.info(f"ComfyUI started with PID {comfy_process.pid}")
+
     uvicorn.run(app, host="0.0.0.0", port=8000)
+    
+    # Shutdown logic after the app stops
+    if comfy_process:
+        logging.info("Shutting down ComfyUI...")
+        comfy_process.terminate()
+        comfy_process.wait()
+        logging.info("ComfyUI has been terminated.")
+    else:
+        logging.warning("ComfyUI was not running.")
 
 if __name__ == "__main__":
     start()
