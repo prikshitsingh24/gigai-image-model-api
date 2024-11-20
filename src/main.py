@@ -10,7 +10,26 @@ import subprocess
 
 from utils import startComfyui
 
-app = FastAPI()
+async def lifespan_handler(app: FastAPI):
+    global comfy_process
+    # Startup logic
+    logging.info("Starting ComfyUI...")
+    comfy_process = await startComfyui(COMFY_HOST, COMFY_PORT)
+    logging.info(f"ComfyUI started with PID {comfy_process.pid}")
+    
+    # Yield control to the FastAPI app (this keeps the app running until shutdown)
+    yield
+
+    # Shutdown logic
+    if comfy_process:
+        logging.info("Shutting down ComfyUI...")
+        comfy_process.terminate()
+        await comfy_process.wait()
+        logging.info("ComfyUI has been terminated.")
+    else:
+        logging.warning("ComfyUI was not running.")
+
+app = FastAPI(lifespan=lifespan_handler)
 
 # Enable CORS
 app.add_middleware(
@@ -51,29 +70,6 @@ COMFY_PORT = 8188
 # Ensure directories exist
 for model_type in ModelType:
     os.makedirs(os.path.join(MODEL_BASE_DIR, model_type), exist_ok=True)
-
-async def lifespan_handler(app: FastAPI):
-    global comfy_process
-    # Startup logic
-    logging.info("Starting ComfyUI...")
-    comfy_process = await startComfyui(COMFY_HOST, COMFY_PORT)
-    logging.info(f"ComfyUI started with PID {comfy_process.pid}")
-    
-    # Yield control to the FastAPI app (this keeps the app running until shutdown)
-    yield
-
-    # Shutdown logic
-    if comfy_process:
-        logging.info("Shutting down ComfyUI...")
-        comfy_process.terminate()
-        await comfy_process.wait()
-        logging.info("ComfyUI has been terminated.")
-    else:
-        logging.warning("ComfyUI was not running.")
-
-
-app = FastAPI(lifespan=lifespan_handler)
-
 
 
 @app.post("/upload/model/{model_type}")
