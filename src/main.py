@@ -53,6 +53,12 @@ WORKFLOW_BASE_DIR = "/opt/ComfyUI/workflows"
 for model_type in ModelType:
     os.makedirs(os.path.join(MODEL_BASE_DIR, model_type), exist_ok=True)
 
+@app.lifespan("startup")
+async def startup_event():
+    logging.info("Starting ComfyUI...")
+    startComfyui(STARTUP_SCRIPT_PATH)
+    logging.info("ComfyUI started")
+
 
 
 @app.post("/upload/model/{model_type}")
@@ -179,7 +185,6 @@ async def list_workflows():
     return workflows
 
 def start():
-    startComfyui(STARTUP_SCRIPT_PATH)
     uvicorn.run(app, host="0.0.0.0", port=8000)
 
 if __name__ == "__main__":

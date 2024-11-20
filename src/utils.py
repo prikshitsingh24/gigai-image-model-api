@@ -1,22 +1,25 @@
 import subprocess
+import threading
+import time
 import os
 
-def startComfyui(path:str):
-
-    # Ensure the script is executable if needed
-    os.chmod(path, 0o755)  # Optional, if the script isn't already executable
-
-    # Run the Python script using subprocess
-    command = f"python {path}"  # Or "python3" depending on the environment
-
-    result = subprocess.run(command, shell=True, capture_output=True, text=True)
-
-    # Print the output and error (if any)
-    print("STDOUT:", result.stdout)
-    print("STDERR:", result.stderr)
-
-    # Check if the script ran successfully
-    if result.returncode == 0:
-        print("Script executed successfully!")
-    else:
-        print(f"Script failed with return code {result.returncode}")
+def startComfyui(startup_script_path):
+    def run_comfyui():
+        try:
+            # Start ComfyUI with proper Python path
+            env = os.environ.copy()
+            env["PYTHONPATH"] = "/opt/ComfyUI"
+            subprocess.run(
+                ["python3", startup_script_path],
+                env=env,
+                check=True
+            )
+        except Exception as e:
+            print(f"Error starting ComfyUI: {e}")
+    
+    # Start ComfyUI in a separate thread
+    comfy_thread = threading.Thread(target=run_comfyui, daemon=True)
+    comfy_thread.start()
+    
+    # Wait for ComfyUI to initialize
+    time.sleep(5)
