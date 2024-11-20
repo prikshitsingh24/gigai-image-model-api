@@ -107,7 +107,7 @@ async def upload_model(
         logging.error(f"Error uploading model: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/models/list")
+@app.get("/models")
 async def list_models():
     models = {}
     for model_type in ModelType:
@@ -133,6 +133,82 @@ async def delete_model(model_type: ModelType, filename: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+
+# POST endpoint to upload a workflow JSON file
+@app.post("/upload/workflow/{workflow_name}")
+async def upload_workflow(workflow_name: str, workflow_file: UploadFile = File(...)):
+    try:
+        # Ensure that the uploaded file is a JSON
+        file_ext = os.path.splitext(workflow_file.filename)[1].lower()
+        if file_ext != ".json":
+            raise HTTPException(status_code=400, detail="Invalid file extension. Only .json files are allowed.")
+
+        # Save the file
+        save_path = os.path.join(WORKFLOW_BASE_DIR, f"{workflow_name}.json")
+        
+        # Read the file and save it
+        async with aiofiles.open(save_path, 'wb') as out_file:
+            while content := await workflow_file.read(1024 * 1024):  # 1MB chunks
+                await out_file.write(content)
+
+        # Return success response
+        return {"status": "success", "message": f"Workflow {workflow_name} uploaded successfully."}
+
+    except Exception as e:
+        logging.error(f"Error uploading workflow: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# GET endpoint to list all workflow files in the directory
+@app.get("/workflows")
+async def list_workflows():
+    try:
+        workflows = {}
+
+        # List all files in the workflow directory (assuming all are JSON files)
+        files = [f for f in os.listdir(WORKFLOW_BASE_DIR) if os.path.isfile(os.path.join(WORKFLOW_BASE_DIR, f))]
+        
+        # Filter out files that don't have a .json extension
+        json_files = [f for f in files if f.endswith(".json")]
+
+        for json_file in json_files:
+            # Extract the workflow name from the file name (without extension)
+            workflow_name = os.path.splitext(json_file)[0]
+            workflows[workflow_name] = json_file
+        
+        if not workflows:
+            raise HTTPException(status_code=404, detail="No workflows found.")
+
+        return workflows
+
+    except Exception as e:
+        logging.error(f"Error listing workflows: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    
+
+# DELETE endpoint to delete a workflow by its name
+@app.delete("/workflows/{workflow_name}")
+async def delete_workflow(workflow_name: str):
+    try:
+        # Define the file path
+        file_path = os.path.join(WORKFLOW_BASE_DIR, f"{workflow_name}.json")
+
+        # Check if the workflow file exists
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="Workflow not found")
+
+        # Delete the file
+        os.remove(file_path)
+
+        return {"status": "success", "message": f"Workflow {workflow_name} deleted successfully."}
+
+    except Exception as e:
+        logging.error(f"Error deleting workflow: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Add a debug endpoint to check directory structure
 @app.get("/debug/dirs")
 async def debug_dirs():
@@ -157,31 +233,6 @@ async def debug_dirs():
         except Exception as e:
             result[model_type] = {"error": str(e)}
     return result
-
-@app.get("/workflows/list")
-async def list_workflows():
-    workflows = {}
-    
-    # Walk through all directories and subdirectories inside WORKFLOW_BASE_DIR
-    for root, dirs, files in os.walk(WORKFLOW_BASE_DIR):
-        print(f"Checking directory: {root}")  # Debugging line
-        print(f"Files found: {files}")        # Debugging line
-
-        # Filter for .ts files only
-        ts_files = [f for f in files if f.endswith(".ts")]
-        
-        if ts_files:
-            # Get the relative path for the directory
-            relative_dir = os.path.relpath(root, WORKFLOW_BASE_DIR)
-            print(f"Relative directory: {relative_dir}")  # Debugging line
-            
-            if relative_dir == ".":
-                relative_dir = "root"
-            
-            workflows[relative_dir] = ts_files
-    
-    print(f"Workflows found: {workflows}")  # Debugging line
-    return workflows
 
 
 
