@@ -46,7 +46,7 @@ STARTUP_SCRIPT_PATH = "/opt/ComfyUI/main.py"
 MODEL_BASE_DIR = "/opt/ComfyUI/models"
 WORKFLOW_BASE_DIR = "/opt/ComfyUI/workflows"
 COMFY_HOST = "127.0.0.1"
-COMFY_PORT = "8188"
+COMFY_PORT = 8188
 
 # Ensure directories exist
 for model_type in ModelType:
@@ -70,7 +70,7 @@ async def lifespan_handler(app: FastAPI):
         logging.info("ComfyUI has been terminated.")
     else:
         logging.warning("ComfyUI was not running.")
-        
+
 
 app = FastAPI(lifespan=lifespan_handler)
 

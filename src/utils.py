@@ -1,10 +1,10 @@
-import subprocess
 import os
 import logging
+import asyncio
 
-def startComfyui(host, port):
+async def startComfyui(host: str, port: int):
     """
-    Launch ComfyUI using init.sh script with specific environment variables
+    Launch ComfyUI using init.sh script with specific environment variables.
     
     Args:
         host (str): Host address for ComfyUI
@@ -21,14 +21,14 @@ def startComfyui(host, port):
         })
         
         # Launch ComfyUI process using init.sh
-        process = subprocess.Popen(
-            ["init.sh"],
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+        process = await asyncio.create_subprocess_exec(
+            "init.sh",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env=env
         )
         
-        logging.info(f"Started ComfyUI on {host}:{port}")
+        logging.info(f"Started ComfyUI on {host}:{port} with PID {process.pid}")
         return process
         
     except Exception as e:
