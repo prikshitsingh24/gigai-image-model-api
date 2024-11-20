@@ -186,7 +186,7 @@ async def list_workflows():
         logging.error(f"Error listing workflows: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
     
-    
+
 
 # DELETE endpoint to delete a workflow by its name
 @app.delete("/workflows/{workflow_name}")
@@ -236,11 +236,24 @@ async def debug_dirs():
 
 
 
-def start():
-    # Run the FastAPI application with uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+async def start_services():
+    # Start ComfyUI process asynchronously
+    comfyui_task = asyncio.create_task(startComfyui("127.0.0.1", 8188))
+
+    # Start FastAPI (uvicorn) application asynchronously
+    # Run it within the event loop without blocking the main thread
+    fastapi_task = asyncio.create_task(run_fastapi())
+
+    # Wait for the tasks to finish
+    await comfyui_task
+    await fastapi_task
+
+async def run_fastapi():
+    # Run the FastAPI server using uvicorn but do it asynchronously
+    config = uvicorn.Config(app, host="0.0.0.0", port=8000)
+    server = uvicorn.Server(config)
+    await server.serve()
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.create_task(startComfyui("127.0.0.1", 8188))
-    start()
+    # Run the start_services function to run both the ComfyUI process and FastAPI concurrently
+    asyncio.run(start_services())
