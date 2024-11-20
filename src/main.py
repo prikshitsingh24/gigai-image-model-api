@@ -1,3 +1,4 @@
+import asyncio
 import threading
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -182,29 +183,13 @@ async def list_workflows():
     print(f"Workflows found: {workflows}")  # Debugging line
     return workflows
 
-# Function to start ComfyUI (runs as a separate process)
-def start_comfyui():
-    global comfy_process
-    logging.info("Starting ComfyUI...")
-    comfy_process = startComfyui(COMFY_HOST, COMFY_PORT)
-    logging.info(f"ComfyUI started: {comfy_process}")
+
 
 def start():
-    # Start ComfyUI in a separate thread
-    comfy_thread = threading.Thread(target=start_comfyui)
-    comfy_thread.start()
-
     # Run the FastAPI application with uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
 
-    # Optionally, handle shutting down ComfyUI if needed (when FastAPI shuts down)
-    if comfy_process:
-        logging.info("Shutting down ComfyUI...")
-        comfy_process.terminate()
-        comfy_process.wait()
-        logging.info("ComfyUI has been terminated.")
-    else:
-        logging.warning("ComfyUI was not running.")
-
 if __name__ == "__main__":
+    loop = asyncio.get_event_loop()
+    loop.create_task(startComfyui("127.0.0.1", 8188))
     start()
