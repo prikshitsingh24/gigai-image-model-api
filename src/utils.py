@@ -22,7 +22,7 @@ def startComfyui(host="0.0.0.0", port=3000):
         
         # Launch ComfyUI process using init.sh
         process = subprocess.Popen(
-            ["/opt/ComfyUI/init.sh"],
+            ["init.sh"],
             env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
