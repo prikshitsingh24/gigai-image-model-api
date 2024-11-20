@@ -10,7 +10,7 @@ import subprocess
 
 from utils import startComfyui
 
-app = FastAPI(lifespan="lifespan_handler")
+app = FastAPI()
 
 # Enable CORS
 app.add_middleware(
@@ -70,6 +70,9 @@ async def lifespan_handler(app: FastAPI):
         logging.info("ComfyUI has been terminated.")
     else:
         logging.warning("ComfyUI was not running.")
+        
+
+app = FastAPI(lifespan=lifespan_handler)
 
 
 
