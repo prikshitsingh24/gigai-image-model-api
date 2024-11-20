@@ -51,7 +51,7 @@ app = FastAPI()
 async def startup_event():
     global comfy_process
     logging.info("Starting ComfyUI...")
-    comfy_process = startComfyui(COMFY_HOST, COMFY_PORT)
+    comfy_process = await startComfyui(COMFY_HOST, COMFY_PORT)
     logging.info(f"ComfyUI started with PID {comfy_process.pid}")
 
 # Shutdown event to stop ComfyUI
